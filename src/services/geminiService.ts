@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 export enum ExamIQMode {
   NOTES_GENERATION = "NOTES_GENERATION",
   MCQ_GENERATION = "MCQ_GENERATION",
-  FIVE_MARK_QUESTIONS = "FIVE_MARK_QUESTIONS",
+  DESCRIPTIVE_QUESTIONS = "DESCRIPTIVE_QUESTIONS",
   TEST_EXPLANATION = "TEST_EXPLANATION",
   CHAT_TUTOR = "CHAT_TUTOR",
 }
@@ -22,15 +22,16 @@ export interface MCQ {
   explanation: string;
 }
 
-export interface FiveMarkQuestion {
+export interface DescriptiveQuestion {
   question: string;
+  marks: number;
   introduction: string;
   key_points: string[];
   conclusion: string;
   marks_distribution: string;
 }
 
-export const generateExamContent = async (mode: ExamIQMode, input: string, difficulty: string = "Medium") => {
+export const generateExamContent = async (mode: ExamIQMode, input: string, difficulty: string = "Medium", marks?: number) => {
   let systemInstruction = `You are the AI engine for an educational platform called "ExamIQ".
 ExamIQ is an AI-powered university exam preparation platform.
 Your role is to:
@@ -92,15 +93,18 @@ ${input}`;
         },
       };
       break;
-    case ExamIQMode.FIVE_MARK_QUESTIONS:
-      prompt = `MODE: FIVE_MARK_QUESTIONS
-Generate descriptive 5-mark university-style questions based on the provided content.
+    case ExamIQMode.DESCRIPTIVE_QUESTIONS:
+      const m = marks || 5;
+      prompt = `MODE: DESCRIPTIVE_QUESTIONS
+Generate descriptive ${m}-mark university-style questions based on the provided content.
+Difficulty: ${difficulty}
+
 For each question, provide:
 1. The question itself.
 2. A brief academic introduction to the topic.
-3. 5-7 critical key points that must be included in a high-scoring answer.
+3. ${m > 5 ? '7-10' : m > 2 ? '4-6' : '2-3'} critical key points that must be included in a high-scoring answer.
 4. A concluding summary or synthesis.
-5. A suggested marks distribution (e.g., "1 mark for intro, 3 marks for points, 1 mark for conclusion").
+5. A suggested marks distribution (e.g., "1 mark for intro, ${m - 2} marks for points, 1 mark for conclusion").
 
 Content:
 ${input}`;
@@ -111,6 +115,7 @@ ${input}`;
           type: Type.OBJECT,
           properties: {
             question: { type: Type.STRING },
+            marks: { type: Type.NUMBER },
             introduction: { type: Type.STRING },
             key_points: {
               type: Type.ARRAY,
@@ -119,7 +124,7 @@ ${input}`;
             conclusion: { type: Type.STRING },
             marks_distribution: { type: Type.STRING },
           },
-          required: ["question", "introduction", "key_points", "conclusion", "marks_distribution"],
+          required: ["question", "marks", "introduction", "key_points", "conclusion", "marks_distribution"],
         },
       };
       break;

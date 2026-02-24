@@ -10,7 +10,7 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import Markdown from 'react-markdown';
-import { Material, MCQ, FiveMarkQuestion } from '../types';
+import { Material, MCQ, DescriptiveQuestion } from '../types';
 import { cn } from '../lib/utils';
 
 interface StudyMaterialsProps {
@@ -72,14 +72,14 @@ export default function StudyMaterials({ materials }: StudyMaterialsProps) {
       }
 
       if (material.type === 'five_mark') {
-        const questions = data as FiveMarkQuestion[];
+        const questions = data as DescriptiveQuestion[];
         return (
           <div className="space-y-12">
             {questions.map((q, idx) => (
               <div key={idx} className="p-8 rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4">
                   <span className="bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-primary/20">
-                    5 Marks
+                    {q.marks || 5} Marks
                   </span>
                 </div>
 

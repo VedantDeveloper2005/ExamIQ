@@ -19,6 +19,7 @@ import Analytics from './components/Analytics';
 import AIChat from './components/AIChat';
 import GenerationView from './components/GenerationView';
 import { Material, Score } from './types';
+import { Toaster } from 'sonner';
 
 type View = 'dashboard' | 'materials' | 'exams' | 'analytics' | 'chat' | 'create';
 
@@ -71,6 +72,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+      <Toaster position="top-right" richColors />
       {/* Sidebar */}
       <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed h-full z-50">
         <div className="p-6 flex items-center gap-3">

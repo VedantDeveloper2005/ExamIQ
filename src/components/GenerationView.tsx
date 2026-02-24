@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { 
   Upload, 
@@ -9,10 +9,19 @@ import {
   FileText,
   Check,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  X,
+  File as FileIcon
 } from 'lucide-react';
 import { generateExamContent, ExamIQMode } from '../services/geminiService';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
+import * as mammoth from 'mammoth';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface GenerationViewProps {
   onComplete: () => void;
@@ -21,19 +30,26 @@ interface GenerationViewProps {
 export default function GenerationView({ onComplete }: GenerationViewProps) {
   const [subject, setSubject] = useState('');
   const [input, setInput] = useState('');
+  const [fileTexts, setFileTexts] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [difficulty, setDifficulty] = useState('Medium');
   const [options, setOptions] = useState({
     notes: true,
     mcqs: true,
-    fiveMark: false
+    marks: [] as number[]
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string, type: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerate = async () => {
-    if (!subject || !input) {
-      setError("Please provide both a subject and some content/syllabus.");
+    const combinedInput = (input + '\n\n' + fileTexts.join('\n\n')).trim();
+    
+    if (!subject || !combinedInput) {
+      setError("Please provide both a subject and some content (text or files).");
+      toast.error("Missing subject or content");
       return;
     }
 
@@ -45,7 +61,7 @@ export default function GenerationView({ onComplete }: GenerationViewProps) {
       const tasks = [];
       if (options.notes) {
         tasks.push(async () => {
-          const content = await generateExamContent(ExamIQMode.NOTES_GENERATION, input);
+          const content = await generateExamContent(ExamIQMode.NOTES_GENERATION, combinedInput);
           await fetch('/api/materials', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -56,13 +72,13 @@ export default function GenerationView({ onComplete }: GenerationViewProps) {
               type: 'notes'
             })
           });
-          setProgress(prev => prev + 30);
+          setProgress(prev => prev + 20);
         });
       }
 
       if (options.mcqs) {
         tasks.push(async () => {
-          const content = await generateExamContent(ExamIQMode.MCQ_GENERATION, input, difficulty);
+          const content = await generateExamContent(ExamIQMode.MCQ_GENERATION, combinedInput, difficulty);
           await fetch('/api/materials', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -73,47 +89,126 @@ export default function GenerationView({ onComplete }: GenerationViewProps) {
               type: 'mcq'
             })
           });
-          setProgress(prev => prev + 30);
+          setProgress(prev => prev + 20);
         });
       }
 
-      if (options.fiveMark) {
-        tasks.push(async () => {
-          const content = await generateExamContent(ExamIQMode.FIVE_MARK_QUESTIONS, input);
-          await fetch('/api/materials', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: `${subject}: 5-Mark Questions`,
-              subject,
-              content,
-              type: 'five_mark'
-            })
+      if (options.marks.length > 0) {
+        for (const m of options.marks) {
+          tasks.push(async () => {
+            const content = await generateExamContent(ExamIQMode.DESCRIPTIVE_QUESTIONS, combinedInput, difficulty, m);
+            await fetch('/api/materials', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `${subject}: ${m}-Mark Questions`,
+                subject,
+                content,
+                type: 'five_mark'
+              })
+            });
+            setProgress(prev => prev + (50 / options.marks.length));
           });
-          setProgress(prev => prev + 30);
-        });
+        }
       }
 
       await Promise.all(tasks.map(t => t()));
       setProgress(100);
+      toast.success("Study materials generated successfully!");
       setTimeout(onComplete, 1000);
     } catch (err) {
       console.error("Generation failed", err);
       setError("AI generation failed. Please check your API key and try again.");
+      toast.error("AI Generation Failed");
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const extractTextFromPDF = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    return fullText;
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const validTypes = [
+      'text/plain',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/markdown'
+    ];
+
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.md')) {
+      toast.error(`Unsupported file type: ${file.name}`);
+      return;
+    }
+
+    toast.loading(`Processing ${file.name}...`, { id: file.name });
+
+    try {
+      let text = '';
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        text = await extractTextFromPDF(arrayBuffer);
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        text = result.value;
+      } else {
+        text = await file.text();
+      }
+
+      if (text.trim()) {
+        setFileTexts(prev => [...prev, text]);
+        setUploadedFiles(prev => [...prev, { name: file.name, type: file.type }]);
+        toast.success(`${file.name} uploaded and parsed!`, { id: file.name });
+      } else {
+        toast.error(`No text could be extracted from ${file.name}`, { id: file.name });
+      }
+    } catch (err) {
+      console.error("File processing error", err);
+      toast.error(`Failed to process ${file.name}`, { id: file.name });
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(handleFileUpload);
+  };
+
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    files.forEach(handleFileUpload);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto space-y-8"
+      className="max-w-4xl mx-auto space-y-8 pb-20"
     >
       <header>
-        <h1 className="text-4xl font-black tracking-tight mb-2">Upload & AI Generation</h1>
-        <p className="text-slate-500 text-lg">Transform your university course materials into comprehensive study aids instantly.</p>
+        <h1 className="text-4xl font-black tracking-tight mb-2">Start New Prep</h1>
+        <p className="text-slate-500 text-lg">Upload your course materials and let AI create the perfect study plan.</p>
       </header>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
@@ -127,33 +222,103 @@ export default function GenerationView({ onComplete }: GenerationViewProps) {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary h-14 pl-12 pr-4 text-base"
-              placeholder="e.g. Organic Chemistry II or World History"
+              placeholder="e.g. Data Structures or Microeconomics"
             />
           </div>
         </div>
 
-        {/* Content Input */}
-        <div className="space-y-3">
-          <label className="block text-base font-semibold">Syllabus or Notes Text</label>
-          <textarea 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary p-4 text-base min-h-[200px]"
-            placeholder="Paste your syllabus, lecture notes, or textbook excerpts here..."
-          />
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <Upload size={16} />
-            <span>Or drag and drop files (PDF, DOCX, TXT) - Coming soon</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* File Upload Area */}
+          <div className="space-y-3">
+            <label className="block text-base font-semibold">Upload Documents</label>
+            <div 
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "relative h-[250px] rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center",
+                isDragging 
+                  ? "border-primary bg-primary/5 scale-[1.02]" 
+                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-primary/50"
+              )}
+            >
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                multiple 
+                accept=".txt,.md,.doc,.docx,.pdf"
+                onChange={onFileSelect}
+              />
+              <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                <Upload size={32} />
+              </div>
+              <h3 className="text-lg font-bold mb-1">Click or drag files</h3>
+              <p className="text-sm text-slate-500">Supports PDF, DOCX, TXT, MD</p>
+              
+              {isDragging && (
+                <div className="absolute inset-0 bg-primary/10 backdrop-blur-[2px] rounded-2xl flex items-center justify-center">
+                  <p className="text-primary font-black text-xl">Drop to Upload</p>
+                </div>
+              )}
+            </div>
+
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Uploaded Files ({uploadedFiles.length})</p>
+                  <button 
+                    onClick={() => { setUploadedFiles([]); setFileTexts([]); }}
+                    className="text-[10px] font-bold text-red-500 hover:underline uppercase tracking-tighter"
+                  >
+                    Clear Files
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {uploadedFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium group relative">
+                      <FileIcon size={12} className="text-primary" />
+                      <span className="truncate max-w-[120px]">{f.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Text Input Area */}
+          <div className="space-y-3">
+            <label className="block text-base font-semibold">Manual Text Input</label>
+            <div className="relative h-[250px]">
+              <textarea 
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full h-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary p-4 text-base resize-none"
+                placeholder="Paste your syllabus, lecture notes, or textbook excerpts here..."
+              />
+              {input && (
+                <button 
+                  onClick={() => { setInput(''); }}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-red-500 transition-colors shadow-sm"
+                  title="Clear manual text"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-400 italic">Manual text will be combined with uploaded files for generation.</p>
           </div>
         </div>
 
         {/* Options */}
-        <div className="space-y-6">
+        <div className="space-y-6 pt-4">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Settings2 className="text-primary" size={20} />
             Generation Options
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className={cn(
               "relative flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all",
               options.notes ? "border-primary bg-primary/5" : "border-slate-100 dark:border-slate-800 hover:border-primary/30"
@@ -197,28 +362,31 @@ export default function GenerationView({ onComplete }: GenerationViewProps) {
                 <span className="text-slate-500 text-xs">Multiple choice quiz</span>
               </div>
             </label>
+          </div>
 
-            <label className={cn(
-              "relative flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all",
-              options.fiveMark ? "border-primary bg-primary/5" : "border-slate-100 dark:border-slate-800 hover:border-primary/30"
-            )}>
-              <input 
-                type="checkbox" 
-                checked={options.fiveMark}
-                onChange={() => setOptions({ ...options, fiveMark: !options.fiveMark })}
-                className="hidden"
-              />
-              <div className={cn(
-                "w-5 h-5 rounded border-2 flex items-center justify-center",
-                options.fiveMark ? "bg-primary border-primary" : "border-slate-300"
-              )}>
-                {options.fiveMark && <Check size={14} className="text-white" />}
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-sm">5-Mark Questions</span>
-                <span className="text-slate-500 text-xs">Conceptual practice</span>
-              </div>
-            </label>
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Descriptive Questions (Marks)</label>
+            <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+              {[1, 2, 3, 4, 5, 6, 8].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => {
+                    const newMarks = options.marks.includes(m)
+                      ? options.marks.filter(x => x !== m)
+                      : [...options.marks, m];
+                    setOptions({ ...options, marks: newMarks });
+                  }}
+                  className={cn(
+                    "h-12 rounded-xl border-2 font-bold text-sm transition-all",
+                    options.marks.includes(m)
+                      ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
+                      : "border-slate-100 dark:border-slate-800 text-slate-500 hover:border-primary/30"
+                  )}
+                >
+                  {m}M
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

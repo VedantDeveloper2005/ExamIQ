@@ -10,8 +10,9 @@ export interface MCQ {
   explanation: string;
 }
 
-export interface FiveMarkQuestion {
+export interface DescriptiveQuestion {
   question: string;
+  marks: number;
   introduction: string;
   key_points: string[];
   conclusion: string;
