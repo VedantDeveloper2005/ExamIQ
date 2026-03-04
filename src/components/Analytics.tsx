@@ -50,64 +50,72 @@ export default function Analytics({ scores }: AnalyticsProps) {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
+      className="space-y-10"
     >
       <header>
-        <div className="flex items-center gap-2 text-primary font-medium text-sm mb-1">
-          <TrendingUp size={18} />
+        <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-[0.2em] mb-2">
+          <TrendingUp size={16} />
           <span>Student Performance Hub</span>
         </div>
-        <h1 className="text-4xl font-black tracking-tight">Performance Analytics</h1>
-        <p className="text-slate-500">Track your learning curve and optimize your university exam prep with AI-driven insights.</p>
+        <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Performance Analytics</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-lg font-medium mt-1">Track your learning curve and optimize your university exam prep with AI-driven insights.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="flex flex-col gap-3 rounded-xl p-6 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 text-slate-500">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="flex flex-col gap-4 rounded-[2rem] p-8 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/60 dark:border-slate-800 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 text-slate-400">
             <Target className="text-primary" size={20} />
-            <p className="text-sm font-semibold uppercase tracking-wider">Overall Average</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]">Overall Average</p>
           </div>
           <div className="flex items-baseline gap-2">
-            <p className="text-4xl font-black">{avgScore}%</p>
-            <span className="text-emerald-500 text-sm font-bold">+2.4% this month</span>
+            <p className="text-5xl font-black text-slate-900 dark:text-white">{avgScore}%</p>
+            <span className="text-emerald-500 text-xs font-black uppercase tracking-widest">+2.4%</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl p-6 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 text-slate-500">
+        <div className="flex flex-col gap-4 rounded-[2rem] p-8 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/60 dark:border-slate-800 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 text-slate-400">
             <AlertTriangle className="text-amber-500" size={20} />
-            <p className="text-sm font-semibold uppercase tracking-wider">Weakest Subject</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]">Weakest Subject</p>
           </div>
-          <p className="text-2xl font-bold">{weakest?.subject || 'N/A'}</p>
-          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-1">
-            <div className="h-full bg-amber-500 rounded-full" style={{ width: `${weakest?.avg || 0}%` }}></div>
+          <p className="text-2xl font-black text-slate-900 dark:text-white truncate">{weakest?.subject || 'N/A'}</p>
+          <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${weakest?.avg || 0}%` }}
+              className="h-full bg-amber-500 rounded-full" 
+            />
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl p-6 bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 text-slate-500">
+        <div className="flex flex-col gap-4 rounded-[2rem] p-8 bg-white dark:bg-slate-900 shadow-sm border border-slate-200/60 dark:border-slate-800 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 text-slate-400">
             <CheckCircle2 className="text-emerald-500" size={20} />
-            <p className="text-sm font-semibold uppercase tracking-wider">Strongest Subject</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]">Strongest Subject</p>
           </div>
-          <p className="text-2xl font-bold">{strongest?.subject || 'N/A'}</p>
-          <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-1">
-            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${strongest?.avg || 0}%` }}></div>
+          <p className="text-2xl font-black text-slate-900 dark:text-white truncate">{strongest?.subject || 'N/A'}</p>
+          <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${strongest?.avg || 0}%` }}
+              className="h-full bg-emerald-500 rounded-full" 
+            />
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-sm border border-slate-200/60 dark:border-slate-800">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
           <div className="space-y-1">
-            <h3 className="text-xl font-bold">Test Score Progression</h3>
-            <p className="text-slate-500 text-sm">Visualizing performance across your practice sessions.</p>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">Test Score Progression</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Visualizing performance across your practice sessions.</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="size-3 rounded-full bg-primary"></div>
-              <span className="text-xs font-semibold text-slate-500">Score %</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Score %</span>
             </div>
-            <div className="px-3 py-1 bg-primary/10 rounded-lg text-primary text-sm font-bold">
+            <div className="px-5 py-2 bg-primary/10 rounded-xl text-primary text-sm font-black uppercase tracking-widest">
               {avgScore}% Average
             </div>
           </div>

@@ -147,7 +147,7 @@ export default function PracticeExams({ materials, onScoreSubmit }: PracticeExam
           ) : (
             <button 
               onClick={() => setCurrentIndex(currentIndex + 1)}
-              className="flex items-center gap-2 px-10 py-3 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold hover:opacity-90 transition-all"
+              className="flex items-center gap-2 px-10 py-3 rounded-xl bg-primary dark:bg-slate-100 text-white dark:text-slate-900 font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20 dark:shadow-none"
             >
               Next Question
               <ArrowRight size={18} />
@@ -235,7 +235,7 @@ export default function PracticeExams({ materials, onScoreSubmit }: PracticeExam
         <div className="flex gap-4 pt-8">
           <button 
             onClick={() => setIsTakingTest(false)}
-            className="flex-1 py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-all"
+            className="flex-1 py-4 bg-slate-100 dark:bg-slate-100 text-slate-900 dark:text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-all"
           >
             Back to Exams
           </button>
@@ -255,56 +255,59 @@ export default function PracticeExams({ materials, onScoreSubmit }: PracticeExam
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8"
+      className="space-y-10"
     >
       <header>
-        <h1 className="text-3xl font-black tracking-tight">Practice Exams</h1>
-        <p className="text-slate-500 mt-1">Test your knowledge with AI-generated question banks.</p>
+        <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Practice Exams</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-lg font-medium mt-1">Test your knowledge with AI-generated question banks.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {mcqMaterials.map((material) => (
           <div 
             key={material.id}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm hover:border-primary/50 transition-all group"
+            className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200/60 dark:border-slate-800 p-10 shadow-sm hover:border-primary hover:shadow-xl hover:shadow-primary/5 transition-all group"
           >
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                <GraduationCap size={32} />
+            <div className="flex justify-between items-start mb-8">
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary flex items-center justify-center transition-all group-hover:scale-110 shadow-inner">
+                <GraduationCap size={36} />
               </div>
-              <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+              <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border border-slate-200/50 dark:border-slate-700">
                 {JSON.parse(material.content).length} Questions
               </span>
             </div>
             
-            <span className="text-xs font-bold text-primary uppercase tracking-widest mb-1 block">{material.subject}</span>
-            <h3 className="text-xl font-bold mb-4">{material.title}</h3>
+            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">{material.subject}</span>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4 leading-tight">{material.title}</h3>
             
-            <div className="flex items-center gap-4 text-sm text-slate-500 mb-8">
-              <div className="flex items-center gap-1">
-                <Clock size={16} />
+            <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400 mb-10 font-medium">
+              <div className="flex items-center gap-2">
+                <Clock size={18} className="text-slate-300" />
                 ~15 mins
               </div>
-              <div className="flex items-center gap-1">
-                <BrainCircuit size={16} />
+              <div className="flex items-center gap-2">
+                <BrainCircuit size={18} className="text-slate-300" />
                 Medium Difficulty
               </div>
             </div>
 
             <button 
               onClick={() => startTest(material)}
-              className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+              className="w-full py-5 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95"
             >
               Start Practice Test
-              <ArrowRight size={18} />
+              <ArrowRight size={20} />
             </button>
           </div>
         ))}
 
         {mcqMaterials.length === 0 && (
-          <div className="col-span-full py-20 text-center bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-            <GraduationCap className="mx-auto text-slate-300 mb-4" size={48} />
-            <p className="text-slate-500 font-medium">No practice exams available. Generate some from your notes!</p>
+          <div className="col-span-full py-20 text-center bg-slate-50/50 dark:bg-slate-900/20 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center mb-6 mx-auto border border-slate-100 dark:border-slate-700">
+              <GraduationCap className="text-slate-300 dark:text-slate-600" size={48} />
+            </div>
+            <p className="text-slate-900 dark:text-white font-bold text-lg">No practice exams available</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">Generate some from your notes to start testing your knowledge!</p>
           </div>
         )}
       </div>

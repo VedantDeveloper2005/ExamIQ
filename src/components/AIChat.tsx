@@ -18,11 +18,15 @@ import { ChatMessage } from '../types';
 import { generateExamContent, ExamIQMode } from '../services/geminiService';
 import { cn } from '../lib/utils';
 
-export default function AIChat() {
+interface AIChatProps {
+  userName: string;
+}
+
+export default function AIChat({ userName }: AIChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: "Hello Alex! I'm your ExamIQ AI Tutor. I've analyzed your current study materials. What would you like to dive into today? I can explain complex concepts, generate quick practice questions, or help you review for your upcoming exams.",
+      content: `Hello ${userName.split(' ')[0]}! I'm your ExamIQ AI Tutor. I've analyzed your current study materials. What would you like to dive into today? I can explain complex concepts, generate quick practice questions, or help you review for your upcoming exams.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -67,148 +71,164 @@ export default function AIChat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] relative">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">AI Study Assistant</h3>
-        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="text-emerald-500" size={16} />
-            Gemini 3.1 Pro Active
-          </span>
-          <span>•</span>
-          <span>Personalized for your syllabus</span>
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-slate-950">
+      {/* Chat Header */}
+      <div className="px-10 py-6 border-b border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="size-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-primary border border-slate-200/60 dark:border-slate-700 shadow-inner group-hover:scale-110 transition-transform">
+            <Bot size={32} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">AI Study Tutor</h3>
+            <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+              <span className="flex items-center gap-1.5">
+                <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                Gemini 3.1 Pro Active
+              </span>
+              <span className="opacity-30">•</span>
+              <span>Personalized for your syllabus</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all">
+            <Bookmark size={22} />
+          </button>
+          <button className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all">
+            <Copy size={22} />
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-8 pr-4 custom-scrollbar">
-        <AnimatePresence initial={false}>
-          {messages.map((msg, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "flex gap-4 items-start",
-                msg.role === 'user' ? "justify-end" : "justify-start"
-              )}
-            >
-              {msg.role === 'assistant' && (
-                <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20">
-                  <Bot size={20} />
-                </div>
-              )}
-              
-              <div className={cn(
-                "flex flex-col gap-2 max-w-[85%]",
-                msg.role === 'user' ? "items-end" : "items-start"
-              )}>
-                <div className="flex items-center gap-3">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="max-w-4xl mx-auto px-8 py-12 space-y-10">
+          <AnimatePresence initial={false}>
+            {messages.map((msg, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "flex gap-5 items-start",
+                  msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                )}
+              >
+                <div className={cn(
+                  "size-12 rounded-2xl shrink-0 flex items-center justify-center border shadow-sm transition-all",
+                  msg.role === 'assistant' 
+                    ? "bg-white dark:bg-slate-800 text-primary border-slate-200/60 dark:border-slate-700" 
+                    : "bg-primary dark:bg-slate-700 border-primary/20 dark:border-slate-600 overflow-hidden"
+                )}>
                   {msg.role === 'assistant' ? (
-                    <>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">ExamIQ AI</span>
-                      <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
-                    </>
+                    <Bot size={24} />
                   ) : (
-                    <>
-                      <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">You</span>
-                    </>
+                    <img src="https://picsum.photos/seed/student/200" alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   )}
                 </div>
                 
                 <div className={cn(
-                  "p-5 rounded-2xl shadow-sm border relative",
-                  msg.role === 'assistant' 
-                    ? "bg-white dark:bg-slate-800 rounded-tl-none border-slate-100 dark:border-slate-700" 
-                    : "bg-primary text-white rounded-tr-none border-primary shadow-md"
+                  "flex flex-col gap-3 max-w-[85%]",
+                  msg.role === 'user' ? "items-end" : "items-start"
                 )}>
-                  <div className={cn("markdown-body", msg.role === 'user' && "text-white")}>
-                    <Markdown>{msg.content}</Markdown>
+                  <div className="flex items-center gap-3 px-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      {msg.role === 'assistant' ? 'ExamIQ AI' : 'You'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{msg.timestamp}</span>
                   </div>
-
-                  {msg.role === 'assistant' && (
-                    <div className="flex items-center gap-3 pt-4 mt-4 border-t border-slate-100 dark:border-slate-700">
-                      <button className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary py-1.5 px-3 rounded-lg transition-colors text-xs font-semibold">
-                        <Bookmark size={14} />
-                        Save to Notes
-                      </button>
-                      <button className="text-slate-400 hover:text-slate-600 transition-colors">
-                        <Copy size={14} />
-                      </button>
-                      <div className="ml-auto flex gap-2">
-                        <ThumbsDown size={14} className="text-slate-300 hover:text-red-500 cursor-pointer" />
-                        <ThumbsUp size={14} className="text-slate-300 hover:text-emerald-500 cursor-pointer" />
-                      </div>
+                  
+                  <div className={cn(
+                    "p-8 rounded-[2rem] shadow-sm border transition-all",
+                    msg.role === 'assistant' 
+                      ? "bg-white dark:bg-slate-800 rounded-tl-none border-slate-200/60 dark:border-slate-700" 
+                      : "bg-primary text-white rounded-tr-none border-primary/20 shadow-xl shadow-primary/10 dark:shadow-none"
+                  )}>
+                    <div className={cn(
+                      "markdown-body prose dark:prose-invert max-w-none text-lg leading-relaxed",
+                      msg.role === 'user' ? "text-white prose-headings:text-white prose-strong:text-white prose-p:text-white/90" : "text-slate-700 dark:text-slate-300"
+                    )}>
+                      <Markdown>{msg.content}</Markdown>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {msg.role === 'user' && (
-                <div className="size-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border-2 border-primary/20">
-                  <img src="https://picsum.photos/seed/student/200" alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    {msg.role === 'assistant' && (
+                      <div className="flex items-center gap-4 pt-6 mt-6 border-t border-slate-100 dark:border-slate-700">
+                        <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 hover:bg-primary/10 text-slate-400 hover:text-primary py-2 px-4 rounded-xl transition-all text-[10px] font-black uppercase tracking-[0.2em] border border-slate-200/60 dark:border-slate-800">
+                          <Bookmark size={14} />
+                          Save to Notes
+                        </button>
+                        <div className="ml-auto flex gap-4">
+                          <ThumbsDown size={18} className="text-slate-300 hover:text-red-500 cursor-pointer transition-colors" />
+                          <ThumbsUp size={18} className="text-slate-300 hover:text-emerald-500 cursor-pointer transition-colors" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        
-        {isTyping && (
-          <div className="flex gap-4 items-start">
-            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20">
-              <Bot size={20} />
-            </div>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-100 dark:border-slate-700 shadow-sm">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          
+          {isTyping && (
+            <div className="flex gap-5 items-start">
+              <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary shrink-0 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+                <Bot size={24} />
+              </div>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] rounded-tl-none border border-slate-200/60 dark:border-slate-700 shadow-sm">
+                <div className="flex gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-primary/40 rounded-full animate-bounce"></span>
+                  <span className="w-2.5 h-2.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-2.5 h-2.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      <div className="mt-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/20">
+      {/* Input Area */}
+      <div className="p-8 bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center gap-2 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl border border-primary/10">
               <Book size={14} />
               Biology 101
             </div>
-            <button className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors">
+            <button className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-200/60 dark:border-slate-700">
               <Plus size={14} />
               Change Subject
             </button>
           </div>
 
           <div className="relative group">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-primary transition-colors">
-              <Sparkles size={20} />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-6 text-slate-400 group-focus-within:text-primary transition-colors">
+              <Sparkles size={24} />
             </div>
-            <input 
-              type="text" 
+            <textarea 
+              rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask me anything about your syllabus..." 
-              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl py-4 pl-12 pr-32 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-lg transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Ask your AI Tutor anything about your syllabus..." 
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-[2rem] py-6 pl-16 pr-20 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary shadow-inner transition-all resize-none max-h-48 text-lg font-medium"
             />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-              <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                <Paperclip size={20} />
-              </button>
+            <div className="absolute bottom-4 right-4">
               <button 
                 onClick={handleSend}
                 disabled={!input.trim() || isTyping}
-                className="ml-1 flex items-center justify-center bg-primary text-white p-2.5 rounded-lg hover:bg-primary/90 shadow-md transition-colors disabled:opacity-50"
+                className="flex items-center justify-center bg-primary text-white size-12 rounded-2xl hover:scale-105 active:scale-95 shadow-xl shadow-primary/30 transition-all disabled:opacity-50 disabled:shadow-none"
               >
-                <Send size={20} />
+                <Send size={24} />
               </button>
             </div>
           </div>
-          <p className="text-[10px] text-center text-slate-400 mt-1">
+          <p className="text-[10px] text-center text-slate-400 mt-4 font-black uppercase tracking-widest opacity-60">
             AI can make mistakes. Consider checking important information.
           </p>
         </div>
@@ -217,22 +237,3 @@ export default function AIChat() {
   );
 }
 
-function CheckCircle2({ className, size }: { className?: string, size?: number }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width={size || 24} 
-      height={size || 24} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  );
-}

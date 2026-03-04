@@ -18,22 +18,52 @@ import PracticeExams from './components/PracticeExams';
 import Analytics from './components/Analytics';
 import AIChat from './components/AIChat';
 import GenerationView from './components/GenerationView';
+import SettingsView from './components/Settings';
+import NotificationCenter from './components/NotificationCenter';
+import Login from './components/Login';
+import SignUp from './components/SignUp';
 import { Material, Score } from './types';
 import { Toaster } from 'sonner';
 
-type View = 'dashboard' | 'materials' | 'exams' | 'analytics' | 'chat' | 'create';
+type View = 'dashboard' | 'materials' | 'exams' | 'analytics' | 'chat' | 'create' | 'settings';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [materials, setMaterials] = useState<Material[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('examiq-auth') === 'true';
+  });
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem('examiq-user-name') || 'Alex Rivera';
+  });
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('examiq-theme');
+    return (saved as 'light' | 'dark') || 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    const applyTheme = (t: 'light' | 'dark') => {
+      root.classList.remove('light', 'dark');
+      root.classList.add(t);
+      root.style.colorScheme = t;
+      localStorage.setItem('examiq-theme', t);
+    };
+
+    applyTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
+    if (!isAuthenticated) return;
     try {
       const [mRes, sRes] = await Promise.all([
         fetch('/api/materials'),
@@ -50,6 +80,20 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('examiq-auth');
+    localStorage.removeItem('examiq-user-name');
+    setCurrentView('dashboard');
+  };
+
+  const handleLogin = (name: string = 'Alex Rivera') => {
+    setIsAuthenticated(true);
+    setUserName(name);
+    localStorage.setItem('examiq-auth', 'true');
+    localStorage.setItem('examiq-user-name', name);
+  };
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'materials', label: 'Study Materials', icon: BookOpen },
@@ -60,21 +104,45 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard materials={materials} scores={scores} onViewChange={setCurrentView} />;
+      case 'dashboard': return <Dashboard materials={materials} scores={scores} onViewChange={setCurrentView} userName={userName} />;
       case 'materials': return <StudyMaterials materials={materials} />;
       case 'exams': return <PracticeExams materials={materials} onScoreSubmit={fetchData} />;
       case 'analytics': return <Analytics scores={scores} />;
-      case 'chat': return <AIChat />;
+      case 'chat': return <AIChat userName={userName} />;
+      case 'settings': return <SettingsView theme={theme} onThemeChange={setTheme} userName={userName} />;
       case 'create': return <GenerationView onComplete={() => { fetchData(); setCurrentView('materials'); }} />;
-      default: return <Dashboard materials={materials} scores={scores} onViewChange={setCurrentView} />;
+      default: return <Dashboard materials={materials} scores={scores} onViewChange={setCurrentView} userName={userName} />;
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Toaster position="top-right" richColors />
+        {authView === 'login' ? (
+          <Login 
+            onLogin={(name) => handleLogin(name)} 
+            onNavigateToSignUp={() => setAuthView('signup')} 
+          />
+        ) : (
+          <SignUp 
+            onSignUp={(name) => handleLogin(name)} 
+            onNavigateToLogin={() => setAuthView('login')} 
+          />
+        )}
+      </>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+    <div className="flex min-h-screen bg-background-light dark:bg-background-dark transition-colors">
       <Toaster position="top-right" richColors />
+      <NotificationCenter 
+        isOpen={isNotificationsOpen} 
+        onClose={() => setIsNotificationsOpen(false)} 
+      />
       {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed h-full z-50">
+      <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed h-full z-50 transition-colors">
         <div className="p-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
             <BrainCircuit size={24} />
@@ -114,27 +182,25 @@ export default function App() {
         </div>
 
         <div className="p-4 flex items-center gap-3 border-t border-slate-200 dark:border-slate-800">
-          <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-primary/20">
-            <img 
-              src="https://picsum.photos/seed/student/200" 
-              alt="User" 
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
+            {userName.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate">Alex Rivera</p>
+            <p className="text-sm font-bold truncate">{userName}</p>
             <p className="text-[10px] text-slate-500 uppercase font-semibold">University Student</p>
           </div>
-          <button className="text-slate-400 hover:text-red-500 transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-red-500 transition-colors"
+          >
             <LogOut size={18} />
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-40">
+      <main className="flex-1 ml-64 flex flex-col min-h-screen bg-background-light dark:bg-background-dark transition-colors">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-40 transition-colors">
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -146,19 +212,38 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors relative">
+            <button 
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className={cn(
+                "p-2 rounded-full transition-colors relative",
+                isNotificationsOpen 
+                  ? "bg-primary/10 text-primary" 
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              )}
+            >
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
             </button>
-            <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+            <button 
+              onClick={() => setCurrentView('settings')}
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                currentView === 'settings' 
+                  ? "bg-primary/10 text-primary" 
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              )}
+            >
               <Settings size={20} />
             </button>
           </div>
         </header>
 
-        <div className="p-8 max-w-6xl mx-auto w-full">
+        <div className={cn(
+          "w-full mx-auto flex-1 flex flex-col",
+          currentView === 'chat' ? "" : "p-8 max-w-6xl"
+        )}>
           {loading ? (
-            <div className="flex items-center justify-center h-[60vh]">
+            <div className="flex items-center justify-center flex-1">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           ) : renderView()}
