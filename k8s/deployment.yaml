@@ -18,10 +18,6 @@ spec:
       - name: examiq
         image: miniprodev.azurecr.io/examiq:v1.12
         imagePullPolicy: Always
-        volumeMounts:
-        - name: secrets-store
-          mountPath: "/mnt/secrets"
-          readOnly: true
         ports:
         - containerPort: 3000
         env:
@@ -68,10 +64,3 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "250m"
-      volumes:
-      - name: secrets-store
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "examiq-kv-secrets"
