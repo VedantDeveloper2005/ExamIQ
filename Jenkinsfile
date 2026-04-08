@@ -2,8 +2,8 @@ pipeline {
 agent any
 
 environment {
-    ACR_NAME = "miniprodev"
-    IMAGE_NAME = "miniprodev.azurecr.io/examiq:v${BUILD_NUMBER}"
+    ACR_NAME = "examiqacr123"
+    IMAGE_NAME = "examiqacr123.azurecr.io/examiq:v10"
     SONAR_HOST_URL = "http://20.244.30.137:9000"
 }
 
@@ -51,7 +51,7 @@ stages {
     stage('Build Docker Image') {
         steps {
             sh '''
-            docker build -t $IMAGE_NAME .
+            docker build -t examiqacr123.azurecr.io/examiq:v10 .
             '''
         }
     }
@@ -70,13 +70,13 @@ stages {
         steps {
             withCredentials([usernamePassword(
                 credentialsId: 'acr-creds',
-                usernameVariable: 'ACR_USERNAME',
-                passwordVariable: 'ACR_PASSWORD'
+                usernameVariable: 'ACR_USER',
+                passwordVariable: 'ACR_PASS'
             )]) {
-                sh '''
-                echo $ACR_PASSWORD | docker login $ACR_NAME.azurecr.io -u $ACR_USERNAME --password-stdin
-                docker push $IMAGE_NAME
-                '''
+                sh """
+                echo $ACR_PASS | docker login examiqacr123.azurecr.io -u $ACR_USER --password-stdin
+                docker push examiqacr123.azurecr.io/examiq:v10
+                """
             }
         }
     }
