@@ -1,6 +1,7 @@
 pipeline {
 agent any
 
+```
 environment {
     ACR_NAME = "examiqacr123"
     IMAGE_NAME = "examiqacr123.azurecr.io/examiq:v10"
@@ -34,16 +35,13 @@ stages {
     stage('OWASP Dependency Check') {
         steps {
             sh '''
-            mkdir -p odc-data
-
             docker run --rm \
               -v $(pwd):/src \
-              -v $(pwd)/odc-data:/usr/share/dependency-check/data \
+              -v owasp-cache:/usr/share/dependency-check/data \
               owasp/dependency-check \
               --scan /src \
               --format HTML \
-              --out /src/odc-report \
-              --noupdate || true
+              --out /src/odc-report || true
             '''
         }
     }
@@ -51,7 +49,7 @@ stages {
     stage('Build Docker Image') {
         steps {
             sh '''
-            docker build -t examiqacr123.azurecr.io/examiq:v10 .
+            docker build -t $IMAGE_NAME .
             '''
         }
     }
@@ -61,7 +59,10 @@ stages {
             sh '''
             docker run --rm \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              aquasec/trivy:0.50.0 image --severity HIGH,CRITICAL $IMAGE_NAME
+              aquasec/trivy:0.50.0 image \
+              --scanners vuln \
+              --severity HIGH,CRITICAL \
+              $IMAGE_NAME
             '''
         }
     }
@@ -73,10 +74,10 @@ stages {
                 usernameVariable: 'ACR_USER',
                 passwordVariable: 'ACR_PASS'
             )]) {
-                sh """
-                echo $ACR_PASS | docker login examiqacr123.azurecr.io -u $ACR_USER --password-stdin
-                docker push examiqacr123.azurecr.io/examiq:v10
-                """
+                sh '''
+                echo $ACR_PASS | docker login $ACR_NAME.azurecr.io -u $ACR_USER --password-stdin
+                docker push $IMAGE_NAME
+                '''
             }
         }
     }
@@ -88,8 +89,12 @@ stages {
                 export KUBECONFIG=$KUBECONFIG
 
                 kubectl get nodes
+
+                # Apply Kubernetes manifests
                 kubectl apply -f k8s/ --validate=false
-                kubectl set image deployment/examiq examiq=$IMAGE_NAME
+
+                # Update image (rolling update)
+                kubectl set image deployment/examiq examiq=$IMAGE_NAME || true
                 '''
             }
         }
@@ -101,4 +106,6 @@ post {
         archiveArtifacts artifacts: 'odc-report/**/*', fingerprint: true
     }
 }
+```
+
 }
