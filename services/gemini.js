@@ -1,0 +1,117 @@
+const { GoogleGenAI, Type } = require("@google/genai");
+const { GEMINI_API_KEY } = require("../config/secrets");
+
+let ai = null;
+if (!GEMINI_API_KEY) {
+  console.warn("⚠️ WARNING: Gemini API key missing from /mnt/secrets/ mount");
+} else {
+  ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+}
+
+const ExamIQMode = {
+  NOTES_GENERATION: "NOTES_GENERATION",
+  MCQ_GENERATION: "MCQ_GENERATION",
+  DESCRIPTIVE_QUESTIONS: "DESCRIPTIVE_QUESTIONS",
+  TEST_EXPLANATION: "TEST_EXPLANATION",
+  CHAT_TUTOR: "CHAT_TUTOR",
+};
+
+const generateExamContent = async (mode, input, difficulty = "Medium", marks) => {
+  if (!ai) {
+    throw new Error("GEMINI_NOT_CONFIGURED: SDK requires an API Key to function.");
+  }
+
+  let systemInstruction = `You are the AI engine for an educational platform called "ExamIQ".
+ExamIQ is an AI-powered university exam preparation platform.
+Your role is to:
+- Convert uploaded syllabus or notes into structured study materials
+- Generate exam-style questions
+- Provide clear explanations
+- Help students prepare for university-level exams
+
+IMPORTANT RULES:
+1. Always respond in structured and clean academic format.
+2. Keep explanations concise but exam-focused.
+3. Avoid unnecessary storytelling.
+4. Use headings, bullet points, and clear formatting.
+5. Focus on university-level depth.
+6. Do not hallucinate unknown syllabus content.
+7. If content is unclear, ask for clarification.
+8. Output must be clean and frontend-render friendly (Markdown supported).`;
+
+  let prompt = "";
+  let responseMimeType = "text/plain";
+  let responseSchema = undefined;
+
+  switch (mode) {
+    case ExamIQMode.NOTES_GENERATION:
+      prompt = `MODE: NOTES_GENERATION\nConvert the following text into structured notes:\n\n${input}`;
+      break;
+    case ExamIQMode.MCQ_GENERATION:
+      prompt = `MODE: MCQ_GENERATION\nGenerate ${difficulty} difficulty multiple choice questions based on the provided content.\nEach question must:\n- Be university-level and test conceptual understanding, not just rote memorization.\n- Have 4 distinct options (A, B, C, D).\n- Have one clearly correct answer.\n- Include a detailed explanation of WHY the answer is correct and why other options are incorrect.\n\nContent:\n${input}`;
+      responseMimeType = "application/json";
+      responseSchema = {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            question: { type: Type.STRING },
+            options: {
+              type: Type.OBJECT,
+              properties: {
+                A: { type: Type.STRING },
+                B: { type: Type.STRING },
+                C: { type: Type.STRING },
+                D: { type: Type.STRING },
+              },
+              required: ["A", "B", "C", "D"],
+            },
+            correct_answer: { type: Type.STRING },
+            explanation: { type: Type.STRING },
+          },
+          required: ["question", "options", "correct_answer", "explanation"],
+        },
+      };
+      break;
+    case ExamIQMode.DESCRIPTIVE_QUESTIONS:
+      const m = marks || 5;
+      prompt = `MODE: DESCRIPTIVE_QUESTIONS\nGenerate descriptive ${m}-mark university-style questions based on the provided content.\nDifficulty: ${difficulty}\n\nContent:\n${input}`;
+      responseMimeType = "application/json";
+      responseSchema = {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            question: { type: Type.STRING },
+            marks: { type: Type.NUMBER },
+            introduction: { type: Type.STRING },
+            key_points: { type: Type.ARRAY, items: { type: Type.STRING } },
+            conclusion: { type: Type.STRING },
+            marks_distribution: { type: Type.STRING },
+          },
+          required: ["question", "marks", "introduction", "key_points", "conclusion", "marks_distribution"],
+        },
+      };
+      break;
+    case ExamIQMode.TEST_EXPLANATION:
+      prompt = `MODE: TEST_EXPLANATION\nAnalyze this test result:\n\n${input}`;
+      break;
+    case ExamIQMode.CHAT_TUTOR:
+      prompt = `MODE: CHAT_TUTOR\nUser query: ${input}`;
+      break;
+  }
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: prompt,
+    config: {
+      systemInstruction,
+      responseMimeType,
+      responseSchema,
+    },
+  });
+
+  return response.text;
+};
+
+module.exports = { generateExamContent, ExamIQMode };
