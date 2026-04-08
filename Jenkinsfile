@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 environment {
     ACR_NAME = "miniprodev"
     IMAGE_NAME = "miniprodev.azurecr.io/examiq:v${BUILD_NUMBER}"
@@ -105,6 +104,4 @@ post {
         archiveArtifacts artifacts: 'odc-report/**/*', fingerprint: true
     }
 }
-```
-
 }
