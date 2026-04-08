@@ -59,7 +59,9 @@ stages {
     stage('Trivy Scan') {
         steps {
             sh '''
-            docker run --rm aquasec/trivy image --severity HIGH,CRITICAL $IMAGE_NAME
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:0.50.0 image --severity HIGH,CRITICAL $IMAGE_NAME
             '''
         }
     }
