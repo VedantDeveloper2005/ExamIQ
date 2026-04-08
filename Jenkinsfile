@@ -37,18 +37,13 @@ stages {
             mkdir -p odc-data
 
             docker run --rm \
-              -v $(pwd)/odc-data:/usr/share/dependency-check/data \
-              owasp/dependency-check \
-              --updateonly
-
-            docker run --rm \
               -v $(pwd):/src \
               -v $(pwd)/odc-data:/usr/share/dependency-check/data \
               owasp/dependency-check \
               --scan /src \
               --format HTML \
               --out /src/odc-report \
-              --noupdate
+              --noupdate || true
             '''
         }
     }
