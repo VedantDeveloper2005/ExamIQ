@@ -34,6 +34,8 @@ pipeline {
         stage('OWASP Dependency Check') {
             steps {
                 sh '''
+                mkdir -p odc-report
+
                 docker run --rm \
                   -v $(pwd):/src \
                   -v owasp-cache:/usr/share/dependency-check/data \
@@ -99,7 +101,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'odc-report/**/*', fingerprint: true
+            archiveArtifacts artifacts: 'odc-report/**/*', fingerprint: true, allowEmptyArchive: true
         }
     }
 }
